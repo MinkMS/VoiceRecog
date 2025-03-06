@@ -7,6 +7,8 @@ from torch.utils.data import DataLoader
 from datasets import load_dataset, Audio
 import os
 
+# This program will download the dataset straight from hugging face. Just run the code.
+
 # 1. Load the Dataset from Hugging Face
 print("Loading dataset...")
 # Load the dataset (train split)
