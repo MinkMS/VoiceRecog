@@ -5,37 +5,44 @@ import torchaudio
 import torchaudio.transforms as T
 from torch.utils.data import DataLoader
 from datasets import load_dataset, Audio
-import os
+# import os /// Use this lib when you don't have enough storage
 
 # This program will download the dataset straight from hugging face. Just run the code.
 
+# In case of not enough memory in C:\, use this to store the cache in D:\
+# Run the code editor in administrator, and then create a folder named huggingface_cache in D:\
+# os.environ["HF_HOME"] = "D:/huggingface_cache"
+
 # 1. Load the Dataset from Hugging Face
 print("Loading dataset...")
-# Load the dataset (train split)
-dataset = load_dataset("doof-ferb/vlsp2020_vinai_100h", split="train") # full luon
 
-# dataset = load_dataset("doof-ferb/vlsp2020_vinai_100h", split="train[:10%]") # 10% thoi
+# Load the dataset (maybe split the dataset)
+dataset = load_dataset("doof-ferb/vlsp2020_vinai_100h", split="train") # full dataset
 
-# Automatically download, decode, and resample audio to 16kHz
+# dataset = load_dataset("doof-ferb/vlsp2020_vinai_100h", split="train[:x%]") # x% of the dataset, replace it
+
+# Download, decode, and resample audio to 16kHz
 dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
 
-# Detect the transcription key dynamically
+# Detect the transcription key (It's not transcription)
 transcript_key = [key for key in dataset.features.keys() if key != "audio"][0]
 print(f"Detected transcription key: {transcript_key}")
 
-# 2. Preprocess the Audio
+# 2. Preprocess the Audio (not necessary, but recommended)
 def preprocess_audio(example):
+    
     # Convert the raw audio array to a float32 tensor
     speech_array = torch.tensor(example["audio"]["array"], dtype=torch.float32)
     sampling_rate = example["audio"]["sampling_rate"]
 
-    # (Resampling is likely unnecessary because of cast_column, but kept for safety)
+    # Resampling is likely unnecessary because of cast_column, but kept for safety
     if sampling_rate != 16000:
         resampler = T.Resample(sampling_rate, 16000)
         speech_array = resampler(speech_array)
 
     # Compute the Mel Spectrogram (using 128 mel bins)
     mel_transform = T.MelSpectrogram(sample_rate=16000, n_mels=128)
+    
     # mel_transform returns a tensor of shape (channel, n_mels, time)
     mel_spec_tensor = mel_transform(speech_array).squeeze(0).transpose(0, 1)  # Now shape: (time, n_mels)
     mel_spec_tensor = mel_spec_tensor.to(torch.float32)  # Ensure dtype is float32
@@ -48,9 +55,11 @@ dataset = dataset.map(preprocess_audio)
 # 3. Build the Vocabulary from Transcriptions
 def build_vocab(dataset, transcript_key):
     vocab_set = set()
+    
     for sample in dataset:
         # Update the set with all characters in the transcript
         vocab_set.update(list(sample[transcript_key]))
+        
     # Reserve index 0 for the CTC blank token
     vocab = ["<blank>"] + sorted(list(vocab_set))
     char2idx = {ch: idx for idx, ch in enumerate(vocab)}
@@ -68,6 +77,7 @@ def collate_fn(batch):
     transcripts = []
     for sample in batch:
         mel = sample["mel_spec"]
+        
         # Ensure mel_spec is a tensor
         if not isinstance(mel, torch.Tensor):
             mel = torch.tensor(mel, dtype=torch.float32)
@@ -76,6 +86,7 @@ def collate_fn(batch):
 
     # Record original time lengths for each mel spectrogram
     mel_lengths = [spec.size(0) for spec in mel_specs_list]
+    
     # Pad mel spectrograms (resulting shape: (batch, max_time, n_mels))
     mel_specs_padded = nn.utils.rnn.pad_sequence(mel_specs_list, batch_first=True)
 
@@ -96,8 +107,10 @@ train_loader = DataLoader(dataset, batch_size=16, shuffle=True, collate_fn=colla
 class CRNN(nn.Module):
     def __init__(self, num_classes):
         super(CRNN, self).__init__()
+        
         # CNN feature extractor
         self.cnn = nn.Sequential(
+            
             # Input shape: (batch, 1, time, 128)
             nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(32),
@@ -112,6 +125,7 @@ class CRNN(nn.Module):
         # LSTM input size = 64 * 32 = 2048.
         self.rnn = nn.LSTM(input_size=2048, hidden_size=128, num_layers=2,
                            bidirectional=True, batch_first=True)
+        
         # Final fully-connected layer: output dimension = number of classes
         self.fc = nn.Linear(128 * 2, num_classes)
 
@@ -134,12 +148,13 @@ optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
 # 7. Training Loop
 
-num_epochs = 10
+num_epochs = 10 # Can reduce it for faster but less accurate training, recommended for tessting the code
 
 print("Starting training...")
 for epoch in range(num_epochs):
     model.train()
     running_loss = 0.0
+    
     for mel_specs, mel_lengths, targets, target_lengths in train_loader:
         mel_specs = mel_specs.to(device)
         targets = targets.to(device)
@@ -151,7 +166,8 @@ for epoch in range(num_epochs):
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
+        
     avg_loss = running_loss / len(train_loader)
-    print(f"Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}")
+    print(f"Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}") # Loss ban dau thuong la treen 2.5 va duoi 3.0.
 
 print("Training complete!")
