@@ -1,7 +1,6 @@
 # VoiceRecog
 
-## This is my testing project about vietnamese speech recognition. 
-## It uses the doof-ferb/vlsp2020_vinai_100h dataset from hugging face. Here's its link: https://huggingface.co/datasets/doof-ferb/vlsp2020_vinai_100h
+## My testing project about vietnamese speech recognition. It uses the doof-ferb/vlsp2020_vinai_100h dataset from hugging face. Here's its link: https://huggingface.co/datasets/doof-ferb/vlsp2020_vinai_100h
 
 #### This program is recommended to run on a device with GPU (don't use CPU like me pls). It iss also recommended that you have more than 60Gb in C:\ when run thiss code to store the cache from training.
 
