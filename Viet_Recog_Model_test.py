@@ -171,3 +171,7 @@ for epoch in range(num_epochs):
     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}") # Loss ban dau thuong la treen 2.5 va duoi 3.0.
 
 print("Training complete!")
+
+#Save the model
+torch.save(model.state_dict(), "viet_asr_model.pth")
+print("Model saved successfully!")
