@@ -5,13 +5,15 @@ import torchaudio
 import torchaudio.transforms as T
 from torch.utils.data import DataLoader
 from datasets import load_dataset, Audio
-# import os /// Use this lib when you don't have enough storage
+import os
 
 # This program will download the dataset straight from hugging face. Just run the code.
 
 # In case of not enough memory in C:\, use this to store the cache in D:\
 # Run the code editor in administrator, and then create a folder named huggingface_cache in D:\
 # os.environ["HF_HOME"] = "D:/huggingface_cache"
+
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True" # Handling GPU memo prob
 
 # 1. Load the Dataset from Hugging Face
 print("Loading dataset...")
